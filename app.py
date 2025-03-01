@@ -19,7 +19,7 @@ DB_CONNECTION_URL = os.getenv("DB_CONNECTION_URL")
 # MongoDB connection
 mongo_client = MongoClient(DB_CONNECTION_URL)
 # Set up OpenAI API key
-client = OpenAI(api_key=api_key)
+client = OpenAI(api_key="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")
 
 
 db = mongo_client["learning_db"]  # Database name
