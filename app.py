@@ -19,7 +19,9 @@ DB_CONNECTION_URL = os.getenv("DB_CONNECTION_URL")
 # MongoDB connection
 mongo_client = MongoClient(DB_CONNECTION_URL)
 # Set up OpenAI API key
-client = OpenAI(api_key=API_KEY)
+client = OpenAI()
+client.api_key = API_KEY
+
 
 db = mongo_client["learning_db"]  # Database name
 flashcards_collection = db["flashcards"]  # Collection for flashcards
