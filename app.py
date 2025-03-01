@@ -13,13 +13,13 @@ load_dotenv()
 app = Flask(__name__)
 CORS(app)
 
-API_KEY = os.getenv("API_KEY")
+api_key = os.getenv("API_KEY")
 DB_CONNECTION_URL = os.getenv("DB_CONNECTION_URL")
 
 # MongoDB connection
 mongo_client = MongoClient(DB_CONNECTION_URL)
 # Set up OpenAI API key
-client = OpenAI(api_key=os.getenv("API_KEY"))
+client = OpenAI(api_key=api_key)
 
 
 db = mongo_client["learning_db"]  # Database name
