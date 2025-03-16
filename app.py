@@ -29,6 +29,145 @@ stories_collection = db["stories"]
 users_collection = db["users"]  # Collection for users
 
 
+def get_process_steps(user_input):
+    """
+    Generate a step-by-step explanation of a process using OpenAI.
+    """
+    try:
+        prompt = f"""
+        Explain the step-by-step process of {user_input} with numbered steps.
+
+        Each step should:
+        1. Have a numbered main step with a bold title
+        2. Include key elements/molecules involved
+        3. Provide a brief explanation (1-2 sentences)
+        
+        Example format:
+        **1. Step Name**
+        - **Molecule** does an action
+        - **Another molecule** transforms into **product**
+        - Brief explanation
+        """
+
+        
+        completion = client.chat.completions.create(
+            model="gpt-4",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.6,
+            max_tokens=500
+        )
+
+        return completion.choices[0].message.content
+
+    except Exception as e:
+        return f"Error: {str(e)}"
+
+def extract_steps(text):
+    """
+    Extract numbered step titles from AI-generated text using regex.
+    """
+    step_pattern = re.findall(r"\*\*(\d+\..*?)\*\*", text)  # Extract numbered steps
+    return step_pattern
+
+def generate_mermaid_code(user_input, diagram_type="flowchart"):
+    """
+    Generate valid Mermaid.js code from user input.
+    """
+    process_text = get_process_steps(user_input)
+    extracted_steps = extract_steps(process_text)
+
+    if not extracted_steps:
+        return "Error: No steps extracted."
+
+    if diagram_type == "flowchart":
+        mermaid_code = "graph TD;\n"
+        nodes = []
+        links = []
+
+        for i, step in enumerate(extracted_steps):
+            step_id = f"Step{i+1}"
+            safe_label = step.replace('"', "'")  # Replace double quotes to avoid conflicts
+            nodes.append(f'    {step_id}["{safe_label}"]')  # Add step numbering
+            if i > 0:
+                links.append(f"    Step{i}-->Step{i+1}")
+
+        mermaid_code += "\n".join(nodes) + "\n" + "\n".join(links)
+
+    elif diagram_type == "mindmap":
+        mermaid_code = "mindmap\n  root((Main Topic))\n"
+        for step in extracted_steps:
+            safe_label = step.replace('"', "'")  # Ensure proper formatting
+            mermaid_code += f'    "{safe_label}"\n'  # Correct indentation and newline
+
+    elif diagram_type == "timeline":
+        mermaid_code = "timeline\n"
+        for i, step in enumerate(extracted_steps):
+            safe_label = step.replace('"', "'")  # Ensure proper formatting
+            mermaid_code += f'    section {i+1}\n      {safe_label}\n'
+
+
+
+    return mermaid_code
+
+
+
+
+@app.route('/generate-diagram', methods=['POST'])
+def generate_diagram():
+    try:
+        data = request.get_json()
+        input_text = data.get('input_text', '')
+        diagram_type = data.get('diagram_type', 'flowchart')
+        print(input_text,"##############################################")
+        
+        if not input_text:
+            return jsonify({"error": "Please provide input text"}), 400
+        
+        
+        
+        # Extract the mermaid code from the response
+        mermaid_code = generate_mermaid_code(input_text, diagram_type)
+
+        
+        # Clean up the code (remove markdown backticks if they exist)
+        mermaid_code = re.sub(r'^```mermaid\s*|```$', '', mermaid_code, flags=re.MULTILINE).strip()
+        
+        # Convert the mermaid code to an SVG representation
+        # For a real implementation, you would use a library like mermaid-cli or a service
+        # Here we're just wrapping it in a div with the mermaid class for the frontend to render
+        svg_representation = f'<div class="mermaid">{mermaid_code}</div>'
+        
+        
+        return jsonify({
+            "diagram_svg": svg_representation,
+            "mermaid_code": mermaid_code,
+            "input_text": input_text,
+            "diagram_type": diagram_type
+        })
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# @app.route('/save-diagram', methods=['POST'])
+# def save_diagram():
+#     try:
+#         data = request.get_json()
+#         input_text = data.get('input_text', '')
+#         diagram_svg = data.get('diagram_svg', '')
+#         diagram_type = data.get('diagram_type', '')
+#         user_id = data.get('user_id', '')
+
+#         print( diagram_svg)
+        
+#         # Here you would save the diagram to your database
+#         # This is a placeholder - implement your database logic
+        
+#         return jsonify({"message": f"{diagram_type.capitalize()} for '{input_text}' saved successfully!"})
+        
+#     except Exception as e:
+#         return jsonify({"error": str(e)}), 500
+
+
 
 @app.route('/register', methods=['POST'])
 def register():
