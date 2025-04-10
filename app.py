@@ -14,14 +14,13 @@ load_dotenv()
 app = Flask(__name__)
 CORS(app)
 
-api_key = os.getenv("API_KEY")
+API_KEY = os.getenv("API_KEY")
 DB_CONNECTION_URL = os.getenv("DB_CONNECTION_URL")
 
 # MongoDB connection
 mongo_client = MongoClient(DB_CONNECTION_URL)
 # Set up OpenAI API key
-client = OpenAI()
-
+client = OpenAI(api_key=API_KEY)
 
 db = mongo_client["learning_db"]  # Database name
 flashcards_collection = db["flashcards"]  # Collection for flashcards
@@ -36,19 +35,29 @@ def get_process_steps(user_input):
     """
     try:
         prompt = f"""
-        Explain the step-by-step process of {user_input} with numbered steps.
+        You are a knowledgeable science explainer. Your task is to describe the step-by-step process of "{user_input}" in a clear, structured, and educational format.
 
-        Each step should:
-        1. Have a numbered main step with a bold title
-        2. Include key elements/molecules involved
-        3. Provide a brief explanation (1-2 sentences)
-        
-        Example format:
-        **1. Step Name**
-        - **Molecule** does an action
-        - **Another molecule** transforms into **product**
-        - Brief explanation
+        Requirements:
+        - Use **numbered steps**
+        - Begin each step with a short **bold title**
+        - Include **key elements or molecules** involved in each step
+        - Provide a **concise explanation** (1–2 sentences) for each step
+
+        **Output Format Example:**
+
+        **1. Initiation**
+        - **Molecule A** binds to **Enzyme X**
+        - **Substrate B** transforms into **Intermediate C**
+        - This step activates the reaction by initiating binding.
+
+        **2. Conversion**
+        - **Intermediate C** is modified by **Cofactor Y**
+        - **Energy molecule (e.g., ATP)** is consumed
+        - This transformation prepares the molecule for the next step.
+
+        Now, explain the process of "{user_input}" following this format.
         """
+
 
         
         completion = client.chat.completions.create(
@@ -167,7 +176,6 @@ def generate_diagram():
         
 #     except Exception as e:
 #         return jsonify({"error": str(e)}), 500
-
 
 
 @app.route('/register', methods=['POST'])
@@ -425,12 +433,37 @@ def generate_mnemonic():
 
     try:
         completion = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant that creates mnemonics to help students remember complex information."},
-                {"role": "user", "content": f"Create a mnemonic for: {input_text}"}
-            ],
-        )
+    model="gpt-4o-mini",
+    messages=[
+        {
+            "role": "system",
+            "content": (
+                "You are a creative and helpful assistant that generates powerful and easy-to-remember mnemonics. "
+                "Your goal is to help students retain complex information through fun, meaningful, and memorable mnemonics."
+            )
+        },
+        {
+            "role": "user",
+            "content": (
+                f"Create a mnemonic for the following topic:\n\n"
+                f"\"{input_text}\"\n\n"
+                "Requirements:\n"
+                "1. The mnemonic should form a memorable acronym, phrase, or sentence.\n"
+                "2. Each letter (or word) in the mnemonic must correspond to a key point or concept from the topic.\n"
+                "3. After the mnemonic, provide a short explanation mapping each part to what it represents.\n"
+                "\n"
+                "Example Format:\n"
+                "**Mnemonic:** SMART\n"
+                "- **S** – Specific: Define clear goals\n"
+                "- **M** – Measurable: Quantify progress\n"
+                "- **A** – Achievable: Set realistic goals\n"
+                "- **R** – Relevant: Align with objectives\n"
+                "- **T** – Time-bound: Set a deadline"
+            )
+        }
+    ]
+)
+
 
         mnemonic = completion.choices[0].message.content
         return jsonify({"mnemonic": mnemonic})
@@ -449,13 +482,34 @@ def generate_story():
 
     try:
         completion = client.chat.completions.create(
-            model="gpt-4",
-            messages=[
-                {"role": "system", "content": "You are a creative storyteller. Your task is to create engaging and vivid stories that help users remember complex information. Use vivid imagery, emotional connections, and memorable characters to make the story effective and enjoyable."},
-                {"role": "user", "content": f"Create a story to help me remember: {input_text}"}
-            ],
-            max_tokens=300
-        )
+    model="gpt-4",
+    messages=[
+        {
+            "role": "system",
+            "content": (
+                "You are a creative and engaging storyteller who specializes in crafting short, vivid, and memorable stories "
+                "that help users understand and recall complex information. "
+                "Use imaginative characters, emotional connections, and relatable scenarios to embed key concepts into a story. "
+                "The story should be short, engaging, and tied clearly to the topic."
+            )
+        },
+        {
+            "role": "user",
+            "content": (
+                f"Create a short, vivid story to help me remember the following concept:\n\n"
+                f"\"{input_text}\"\n\n"
+                "Story Guidelines:\n"
+                "1. Use a central character or metaphor that represents the main idea.\n"
+                "2. Include vivid sensory details (sights, sounds, feelings) to make it memorable.\n"
+                "3. Embed each key point of the concept into the story clearly.\n"
+                "4. Keep the story concise but emotionally engaging.\n\n"
+                "After the story, briefly explain the meaning behind each element used, mapping it to the real concept."
+            )
+        }
+    ],
+    max_tokens=300
+)
+
 
         story = completion.choices[0].message.content
         return jsonify({"story": story})
@@ -605,5 +659,4 @@ def generate_mcqs():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))  # Default to 5000 if PORT is not set
-    app.run(host='0.0.0.0', port=port)
+    app.run(debug=True)
