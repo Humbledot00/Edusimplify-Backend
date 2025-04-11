@@ -14,13 +14,13 @@ load_dotenv()
 app = Flask(__name__)
 CORS(app)
 
-API_KEY = os.getenv("API_KEY")
+api_key = os.getenv("API_KEY")
 DB_CONNECTION_URL = os.getenv("DB_CONNECTION_URL")
 
 # MongoDB connection
 mongo_client = MongoClient(DB_CONNECTION_URL)
 # Set up OpenAI API key
-client = OpenAI(api_key=API_KEY)
+client = OpenAI()
 
 db = mongo_client["learning_db"]  # Database name
 flashcards_collection = db["flashcards"]  # Collection for flashcards
@@ -659,4 +659,6 @@ def generate_mcqs():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))  # Default to 5000 if PORT is not set
+    app.run(host='0.0.0.0', port=port)
     app.run(debug=True)
