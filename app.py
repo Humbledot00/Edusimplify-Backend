@@ -7,6 +7,8 @@ from bson import ObjectId
 from dotenv import load_dotenv
 import os
 import re
+import string
+from collections import Counter
 # Load environment variables from .env file
 load_dotenv()
 
@@ -27,6 +29,44 @@ flashcards_collection = db["flashcards"]  # Collection for flashcards
 mnemonics_collection = db["mnemonics"]
 stories_collection = db["stories"]
 users_collection = db["users"]  # Collection for users
+
+
+
+def preprocess_text(text):
+    if not text or not isinstance(text, str):
+        return ""
+    
+    # Define stopwords - common words that often don't add value
+    stopwords = {'a', 'an', 'the', 'and', 'or', 'but', 'is', 'are', 'was', 
+                'were', 'be', 'been', 'being', 'in', 'on', 'at', 'to', 'for',
+                'with', 'by', 'about', 'against', 'between', 'into', 'through',
+                'during', 'before', 'after', 'above', 'below', 'from', 'up',
+                'down', 'of', 'off', 'over', 'under', 'again', 'then', 'once',
+                'here', 'there', 'when', 'where', 'why', 'how', 'all', 'any',
+                'both', 'each', 'few', 'more', 'most', 'other', 'some', 'such',
+                'no', 'nor', 'not', 'only', 'own', 'same', 'so', 'than', 'too',
+                'very', 'can', 'will', 'just', 'should', 'now'}
+    
+    # Step 1: Remove extra whitespace
+    text = ' '.join(text.split())
+    
+    # Step 2: Fix spacing after punctuation
+    text = re.sub(r'([.,!?;:])(\w)', r'\1 \2', text)
+    
+    # Step 3: Remove repeated punctuation
+    text = re.sub(r'([.,!?;:]){2,}', r'\1', text)
+    
+    # Step 4: Remove stopwords (optional, comment out if not needed)
+    words = text.split()
+    filtered_words = [word for word in words if word.lower() not in stopwords]
+    text = ' '.join(filtered_words)
+    
+    # Step 5: Check for consistency in paragraph formatting
+    text = re.sub(r'\n{3,}', '\n\n', text)  # Limit to max 2 newlines
+    
+    return text
+
+
 
 
 def get_process_steps(user_input):
@@ -657,6 +697,37 @@ def generate_mcqs():
     except Exception as e:
         print(f"Error: {e}")
         return jsonify({"error": str(e)}), 500
+
+
+
+@app.route('/keyword-mnemonic', methods=['POST'])
+def generate_keyword_mnemonic():
+    try:
+        data = request.json
+        input_text = data.get('input_text')  # e.g., "A paragraph about photosynthesis"
+        processed_text = preprocess_text(input_text)
+
+        if not input_text:
+            return jsonify({"success": False, "error": "Input text are required"}), 400
+
+
+        response = client.chat.completions.create(
+            model="ft:gpt-3.5-turbo-0125:bodhiment::BP99r8So",
+            messages=[
+                {"role": "system", "content": "You are an educational assistant that creates memorable mnemonics to help users learn concepts."},
+                {"role": "user", "content": processed_text}
+            ]
+        )
+
+        mnemonic = response.choices[0].message.content
+
+        return jsonify({"success": True, "mnemonic": mnemonic})
+        
+    except Exception as e:
+        print(f"Error: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))  # Default to 5000 if PORT is not set
