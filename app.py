@@ -542,13 +542,12 @@ def generate_story():
                 "1. Use a central character or metaphor that represents the main idea.\n"
                 "2. Include vivid sensory details (sights, sounds, feelings) to make it memorable.\n"
                 "3. Embed each key point of the concept into the story clearly.\n"
-                "4. Keep the story concise but emotionally engaging.\n"
-                "5. Limit the story length to 300 words, but it should be meaningfull.\n\n"
+                "4. Keep the story concise but emotionally engaging.\n\n"
                 "After the story, briefly explain the meaning behind each element used, mapping it to the real concept."
             )
         }
     ],
-    max_tokens=600
+    max_tokens=300
 )
 
 
